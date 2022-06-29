@@ -10,6 +10,8 @@ const directions = {
   right:  Math.PI
 }
 
+//Comment to check GitHub login
+
 class Ball extends Component {
   constructor (props) {
     super(props)
