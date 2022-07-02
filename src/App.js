@@ -151,7 +151,7 @@ class Environment extends Component {
           gravity={this.props.gravity} 
           rad={20} 
           color={'red'} 
-          elasticity={1} 
+          elasticity={0.9} 
           scale={this.props.scale} 
           time={timeSlice}
           ballStateDisplay={this.props.ballStateDisplay}
@@ -161,14 +161,102 @@ class Environment extends Component {
   }
 }
 
+function BallInfoTable(props) {
+  const ballAngle = props.ballVector.angle.toFixed(1) + "\u00B0"
+  const ballSpeed = props.ballVector.magnitude.toFixed(1) + " m/s"
+  
+  const rowTitleStyle = {
+    textAlign: "right", 
+    paddingRight: "20px"
+  }
+  
+  return (
+    <div>
+      <h4>Ball Trajectory</h4>
+      <table>
+        <tbody>
+          <tr>
+            <td style={rowTitleStyle} >
+              Path Angle:
+            </td>
+
+            <td>
+              {ballAngle}
+            </td>
+          </tr>
+
+          <tr>
+            <td style={rowTitleStyle}>
+              Speed:
+            </td>
+            
+            <td>
+              {ballSpeed}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+function GravityButtons (props) {
+  let buttons = Object.keys(directions).map((direction, i) => (
+      <div key={"dir_btn_" + i}>
+        <input 
+          id={direction} 
+          type={"radio"} 
+          name="gravDir" 
+          value={directions[direction]} 
+          onClick={props.gravityChangeMethod} 
+        />
+
+        <label htmlFor={direction} >{direction}</label>
+      </div>
+  ))
+
+  return(
+    <div>
+      <h4>Gravity Direction</h4>
+      {buttons}
+    </div>
+  )
+}
+
+function InfoBox(props) {
+  const boxStyle = {
+    margin: "30px", 
+    padding: "20px", 
+    background: "tan", 
+    color: "white",
+    
+  }
+
+  const infoStyle = {
+    display: "flex", 
+    gap: "1rem",
+    alignItems: "flex-start"
+  }
+
+  return (
+    <div style={boxStyle}>
+      <h3>Sim Info</h3>
+      <div style={infoStyle}>
+        <BallInfoTable ballVector={props.ballVector}/>
+        <GravityButtons gravityChangeMethod={props.setGravityDirection}/>
+      </div>
+    </div>
+  )
+}
+
 class Simulator extends Component {
   constructor(props) {
     super(props)
 
     this.state = {
-      gravity: new Vector.Vector(10, 260),
+      gravity: new Vector.Vector(100, directions.up),
       scale: 2,
-      framerate: 100,
+      framerate: 150,
       ballVector: new Vector.Vector(0,0)
     }
   }
@@ -183,14 +271,6 @@ class Simulator extends Component {
     this.setState({gravity: new Vector.Vector(10, direction)})
   }
 
-  gravityButtons = () => {
-    let buttons = Object.keys(directions).map((direction, i) => (
-        <button value={directions[direction]} onClick={this.setGravityDirection} key={"dir_btn_" + i}>{direction}</button>
-    ))
-
-    return buttons
-  }
-
   render() {
     return  (
       <div>
@@ -201,34 +281,10 @@ class Simulator extends Component {
           ballStateDisplay={this.setBallStateDisplay}
         />
 
-        <div>{this.gravityButtons()}</div>
-
-        <div style={{margin: "30px", padding: "20px", background: "tan", color: "white"}}>
-          <h3>Ball State</h3>
-          <table>
-            <tbody>
-              <tr>
-                <td style={{textAlign: "right", paddingRight: "20px"}} >
-                  <p>Path Angle:</p>
-                </td>
-
-                <td>
-                  <p>{this.state.ballVector.angle.toFixed(1)} &deg;</p>
-                </td>
-              </tr>
-
-              <tr>
-                <td style={{textAlign: "right", paddingRight: "20px"}}>
-                  <p>Speed:</p>
-                </td>
-                
-                <td>
-                  <p>{this.state.ballVector.magnitude.toFixed(1)} m/s</p>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        <InfoBox 
+          ballVector={this.state.ballVector}
+          setGravityDirection={this.setGravityDirection}
+        />
       </div>
       )
   }
