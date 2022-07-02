@@ -1,13 +1,14 @@
 import './App.css';
 import {React , Component} from 'react';
+import * as Vector from './Utils/VectorMath'
 
-debugger
+//debugger
 
 const directions = {
-  up:     ((1/2) * Math.PI),
-  down:   ((3/2) * Math.PI),
-  left:   2 * Math.PI,
-  right:  Math.PI
+  up:     90,
+  down:   270,
+  left:   180,
+  right:  0
 }
 
 //Comment to check GitHub login again
@@ -20,7 +21,7 @@ class Ball extends Component {
 
     this.state = {
       position: {x: 0, y: 0},
-      velocityVector: new Vector(0.001, directions.right),
+      velocityVector: new Vector.Vector(0, directions.right),
       envSize: null
     }
   }
@@ -51,9 +52,9 @@ class Ball extends Component {
   calculatePath() {
     const currPosition = this.state.position
     const currVelocity = this.state.velocityVector
-    const gravityAddedVelocity = velocityFromAcceleration(this.props.gravity, this.props.time)
+    const gravityAddedVelocity = Vector.velocityFromAcceleration(this.props.gravity, this.props.time)
     
-    let newVelocity = Vector.combineVectors(currVelocity, gravityAddedVelocity)
+    let newVelocity = Vector.Vector.combineVectors(currVelocity, gravityAddedVelocity)
 
     const newVelocity_components = newVelocity.getVectorComponents()
 
@@ -68,6 +69,8 @@ class Ball extends Component {
 
     this.props.ballStateDisplay(newVelocity)
 
+
+
     this.setState({
       velocityVector: newVelocity,
       position: newPosition
@@ -81,35 +84,44 @@ class Ball extends Component {
     let newVelocity_magnitude = velocity.magnitude
     let newVelocity_angle = velocity.angle
 
-    const [xOut, yOut] = [this.checkXOutOfBounds(position), this.checkYOutOfBounds(position)]
+    const [xOut, yOut] = [
+      this.checkAxisOutOfBounds(position.x, this.state.envSize.x), 
+      this.checkAxisOutOfBounds(position.y, this.state.envSize.y)
+    ]
 
     if(xOut) {
-      newPosition.x = (position.x - (2 * (position.x % this.state.envSize.x))) * elasticity
+      newPosition.x = this.calcBouncePosition(position.x, this.state.envSize.x)
       newVelocity_magnitude *= elasticity
 
       newVelocity_angle *= -1
+      newVelocity_angle += 180
     }
 
     if(yOut) {
-      newPosition.y = (position.y - (2 * (position.y % this.state.envSize.y))) * elasticity
+      newPosition.y = this.calcBouncePosition(position.y, this.state.envSize.y)
       newVelocity_magnitude *= elasticity
 
       newVelocity_angle *= -1 
     }
 
-    return [newPosition, new Vector(newVelocity_magnitude, newVelocity_angle)]
+    return [newPosition, new Vector.Vector(newVelocity_magnitude, newVelocity_angle)]
+  }
+
+  calcBouncePosition(axisPos, axisBound) {
+    const bounceDirection = this.checkAxisOutOfBounds(axisPos, axisBound)
+
+    return (bounceDirection > 0 ? 0 : axisBound) + (bounceDirection * this.scaleRad)
   }
 
   checkOutOfBounds(position) {
-    return (this.checkXOutOfBounds(position) || this.checkYOutOfBounds(position))
+    return (
+      this.checkAxisOutOfBounds(position.x, this.state.envSize.x) || 
+      this.checkAxisOutOfBounds(position.y, this.state.envSize.y)
+    )
   }
 
-  checkXOutOfBounds(position) {
-    return (position.x + this.scaleRad > this.state.envSize.x) - (position.x - this.scaleRad < 0)
-  }
-
-  checkYOutOfBounds(position) {
-    return (position.y + this.scaleRad > this.state.envSize.y) - (position.y - this.scaleRad < 0)
+  checkAxisOutOfBounds(axisPos, axisBound) {
+    return (axisPos - this.scaleRad < 0) - (axisPos + this.scaleRad > axisBound)
   }
 
   render() {
@@ -130,53 +142,6 @@ class Ball extends Component {
   }
 }
 
-class Vector {
-  constructor(magnitude, angle) {
-    this.magnitude = magnitude
-    this.angle = angle
-  }
-
-  static getVectorFromComponents(x, y) {
-    const magnitude = Math.sqrt(x * x + y * y)
-    const angle =  Math.atan(y/x)
-
-    return new Vector(magnitude, angle)
-  }
-
-  static combineVectors(vector_a, vector_b) {
-    const vector_a_components = vector_a.getVectorComponents()
-    const vector_b_components = vector_b.getVectorComponents()
-
-    const combinedVectorComponents = {
-      x: vector_a_components.x + vector_b_components.x,
-      y: vector_a_components.y + vector_b_components.y
-    }
-
-    return Vector.getVectorFromComponents(combinedVectorComponents.x, combinedVectorComponents.y)
-  }
-
-  getVectorComponents() {
-    const [magnitude, angle] = [this.magnitude, this.angle]
-
-    return {x: magnitude * Math.cos(angle), y: magnitude * Math.sin(angle)}
-  }
-}
-
-const velocityFromAcceleration = (accVector, millis) => {
-  return new Vector(
-    accVector.magnitude * millis / 1000,
-    accVector.angle
-  )
-}
-
-const degreesToRad = (deg) => {
-  return deg * Math.PI / 180
-}
-
-const radToDegrees = (rad) => {
-  return rad * 180 / Math.PI
-}
-
 class Environment extends Component {
   render() {   
     const timeSlice = 1000 / this.props.framerate
@@ -186,7 +151,7 @@ class Environment extends Component {
           gravity={this.props.gravity} 
           rad={20} 
           color={'red'} 
-          elasticity={0.9} 
+          elasticity={1} 
           scale={this.props.scale} 
           time={timeSlice}
           ballStateDisplay={this.props.ballStateDisplay}
@@ -201,15 +166,29 @@ class Simulator extends Component {
     super(props)
 
     this.state = {
-      gravity: new Vector(10, directions.down),
+      gravity: new Vector.Vector(10, 260),
       scale: 2,
       framerate: 100,
-      ballVector: new Vector(0,0)
+      ballVector: new Vector.Vector(0,0)
     }
   }
 
   setBallStateDisplay = (vector) => {
     this.setState({ballVector: vector})
+  }
+
+  setGravityDirection = (evt) => {
+    const direction = parseInt(evt.target.value, 10)
+
+    this.setState({gravity: new Vector.Vector(10, direction)})
+  }
+
+  gravityButtons = () => {
+    let buttons = Object.keys(directions).map((direction, i) => (
+        <button value={directions[direction]} onClick={this.setGravityDirection} key={"dir_btn_" + i}>{direction}</button>
+    ))
+
+    return buttons
   }
 
   render() {
@@ -222,6 +201,8 @@ class Simulator extends Component {
           ballStateDisplay={this.setBallStateDisplay}
         />
 
+        <div>{this.gravityButtons()}</div>
+
         <div style={{margin: "30px", padding: "20px", background: "tan", color: "white"}}>
           <h3>Ball State</h3>
           <table>
@@ -232,7 +213,7 @@ class Simulator extends Component {
                 </td>
 
                 <td>
-                  <p>{radToDegrees(this.state.ballVector.angle).toFixed(1)} &deg;</p>
+                  <p>{this.state.ballVector.angle.toFixed(1)} &deg;</p>
                 </td>
               </tr>
 
