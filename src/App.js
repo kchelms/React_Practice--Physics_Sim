@@ -17,32 +17,34 @@ function ViewBox(props) {
 class Environment extends Component {
   componentDidMount() {
     const canvas = document.getElementById('canvas')
-    const canvasContext = canvas.getContext('2d')
-
-    
+    this.dimensions = {x: canvas.width, y: canvas.height}
+    this.canvasContext = canvas.getContext('2d')
 
     this.ball = new BallisticObj({
       position: {x: canvas.width / 2, y: canvas.height / 2},
       rad: 10,
       scale: 1,
       ballStateDisplay: this.props.ballStateDisplay,
-      envSize: {x: canvas.width, y: canvas.height}
+      envSize: this.dimensions
     })
 
-    setInterval(()=>{
-      canvasContext.clearRect(0, 0, canvas.width, canvas.height)
-      
-      canvasContext.fillStyle = "lightgray"
-      canvasContext.fillRect(0, 0, canvas.width, canvas.height)
+    window.requestAnimationFrame(()=>{this.draw()})
+  }
 
-      this.ball.draw(canvasContext)
-    
-    }, 20)
+  draw() {
+      this.canvasContext.clearRect(0, 0, this.dimensions.x, this.dimensions.y)
+      
+      this.canvasContext.fillStyle = "lightgray"
+      this.canvasContext.fillRect(0, 0, this.dimensions.x, this.dimensions.y)
+
+      this.ball.draw(this.canvasContext)
+
+      window.requestAnimationFrame(()=>{this.draw()})
   }
 
   render() {
     return (
-      <ViewBox canvasWidth={window.innerWidth * .5} />
+      <ViewBox canvasWidth={window.innerWidth * .75} />
     )
   }
 }
